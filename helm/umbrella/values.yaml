@@ -1,13 +1,16 @@
-# Shared defaults; override endpoints and sizing per environment in values-<env>.yaml.
-# Each key matches a dependency alias in Chart.yaml and feeds the generic `service` chart.
+# Each top-level key matches a dependency alias in Chart.yaml and feeds the generic
+# `service` chart. Image repositories/tags are injected by the pipeline via --set.
+# Data layer runs in-cluster (services: postgres, redis, kafka) created from k8s/infra.
+# Credentials come from the Secret `shop-secrets` the pipeline creates in the namespace.
 
 apiGateway:
   nameOverride: api-gateway
-  image: { repository: REPLACE_ME/api-gateway }
+  image: { repository: REPLACE_ME/api-gateway, tag: latest }
   containerPort: 8080
   service: { port: 80 }
-  ingress: { enabled: true, host: shop.example.com, path: / }
   env:
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
     USER_SERVICE_URI: http://user-service:80
     PRODUCT_SERVICE_URI: http://product-service:80
     ORDER_SERVICE_URI: http://order-service:80
@@ -16,31 +19,77 @@ apiGateway:
 
 userService:
   nameOverride: user-service
-  image: { repository: REPLACE_ME/user-service }
+  image: { repository: REPLACE_ME/user-service, tag: latest }
   containerPort: 8081
-  envFromSecrets: [user-service-secrets]
-  serviceAccount: { create: true, annotations: {} }
+  service: { port: 80 }
+  envFromSecrets: [shop-secrets]
+  serviceAccount: { create: true, annotations: {} }   # add IRSA role ARN here
+  env:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: users
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    KAFKA_BOOTSTRAP: kafka:9092
 
 productService:
   nameOverride: product-service
-  image: { repository: REPLACE_ME/product-service }
+  image: { repository: REPLACE_ME/product-service, tag: latest }
   containerPort: 8082
-  envFromSecrets: [product-service-secrets]
+  service: { port: 80 }
+  envFromSecrets: [shop-secrets]
+  env:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: products
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    KAFKA_BOOTSTRAP: kafka:9092
 
 orderService:
   nameOverride: order-service
-  image: { repository: REPLACE_ME/order-service }
+  image: { repository: REPLACE_ME/order-service, tag: latest }
   containerPort: 8083
-  envFromSecrets: [order-service-secrets]
+  service: { port: 80 }
+  envFromSecrets: [shop-secrets]
+  env:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: orders
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    KAFKA_BOOTSTRAP: kafka:9092
 
 paymentService:
   nameOverride: payment-service
-  image: { repository: REPLACE_ME/payment-service }
+  image: { repository: REPLACE_ME/payment-service, tag: latest }
   containerPort: 8084
-  envFromSecrets: [payment-service-secrets]
+  service: { port: 80 }
+  envFromSecrets: [shop-secrets]
+  env:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: payments
+    KAFKA_BOOTSTRAP: kafka:9092
 
 notificationService:
   nameOverride: notification-service
-  image: { repository: REPLACE_ME/notification-service }
+  image: { repository: REPLACE_ME/notification-service, tag: latest }
   containerPort: 8085
-  envFromSecrets: [notification-service-secrets]
+  service: { port: 80 }
+  envFromSecrets: [shop-secrets]
+  env:
+    POSTGRES_HOST: postgres
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: notifications
+    KAFKA_BOOTSTRAP: kafka:9092
+
+frontend:
+  nameOverride: frontend
+  image: { repository: REPLACE_ME/frontend, tag: latest }
+  containerPort: 80
+  service: { port: 80 }
+  probes: { livenessPath: /, readinessPath: / }
+  ingress: { enabled: true, className: alb, host: shop.example.com, path: / }
+  env:
+    API_GATEWAY_URL: http://api-gateway:80

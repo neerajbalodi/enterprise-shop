@@ -5,9 +5,10 @@ type: application
 version: 0.1.0
 appVersion: "0.1.0"
 dependencies:
-  - { name: service, version: 0.1.0, alias: apiGateway,         repository: "file://../charts/service" }
-  - { name: service, version: 0.1.0, alias: userService,        repository: "file://../charts/service" }
-  - { name: service, version: 0.1.0, alias: productService,     repository: "file://../charts/service" }
-  - { name: service, version: 0.1.0, alias: orderService,       repository: "file://../charts/service" }
-  - { name: service, version: 0.1.0, alias: paymentService,     repository: "file://../charts/service" }
-  - { name: service, version: 0.1.0, alias: notificationService,repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: apiGateway,          repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: userService,         repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: productService,      repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: orderService,        repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: paymentService,      repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: notificationService, repository: "file://../charts/service" }
+  - { name: service, version: 0.1.0, alias: frontend,            repository: "file://../charts/service" }
