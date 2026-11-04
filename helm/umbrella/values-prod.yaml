@@ -1,0 +1,7 @@
+# Production: autoscaling on, more headroom.
+userService:        { autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 8 } }
+productService:     { autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 8 } }
+orderService:       { autoscaling: { enabled: true, minReplicas: 3, maxReplicas: 10 } }
+paymentService:     { autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6 } }
+notificationService:{ autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6 } }
+apiGateway:         { autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 8 }, ingress: { host: shop.example.com } }

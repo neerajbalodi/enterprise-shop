@@ -1,0 +1,47 @@
+# Defaults shared by every service; override per service in the umbrella values.
+nameOverride: ""
+replicaCount: 1
+
+image:
+  repository: ""           # e.g. <acct>.dkr.ecr.<region>.amazonaws.com/user-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+containerPort: 8080
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Plain config -> ConfigMap. Secrets come from an external source (see secretRefs).
+env: {}
+  # SPRING_PROFILES_ACTIVE: prod
+
+# Names of existing Kubernetes Secrets to pull env from (created by External Secrets, etc.)
+envFromSecrets: []
+  # - user-service-secrets
+
+resources:
+  requests: { cpu: 250m, memory: 384Mi }
+  limits:   { cpu: 750m, memory: 768Mi }
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}          # eks.amazonaws.com/role-arn: ... (IRSA)
+
+probes:
+  livenessPath: /actuator/health/liveness
+  readinessPath: /actuator/health/readiness
+
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  path: /

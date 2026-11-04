@@ -1,0 +1,25 @@
+# Java / Maven
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Node / Angular
+node_modules/
+frontend/dist/
+npm-debug.log
+
+# Terraform
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
+# Env / secrets
+.env
+*.local

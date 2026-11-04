@@ -1,0 +1,99 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY   = "<acct>.dkr.ecr.ap-south-1.amazonaws.com"
+        AWS_REGION = "ap-south-1"
+        IMAGE_TAG  = "${env.GIT_COMMIT.take(8)}"
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps { checkout scm }
+        }
+
+        stage('Build & Unit Test') {
+            steps { sh 'mvn -q clean verify' }
+            post {
+                always { junit '**/target/surefire-reports/*.xml' }
+            }
+        }
+
+        stage('Quality Gate') {
+            parallel {
+                stage('SonarQube') {
+                    steps { sh 'mvn -q sonar:sonar -Dsonar.host.url=$SONAR_URL' }
+                }
+                stage('Dependency scan') {
+                    steps { sh 'mvn -q org.owasp:dependency-check-maven:check' }
+                }
+            }
+        }
+
+        stage('Package & Push Images') {
+            steps {
+                script {
+                    def services = ['api-gateway','user-service','product-service',
+                                    'order-service','payment-service','notification-service']
+                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${REGISTRY}"
+                    for (svc in services) {
+                        sh """
+                           docker build -f services/${svc}/Dockerfile -t ${REGISTRY}/${svc}:${IMAGE_TAG} .
+                           trivy image --exit-code 1 --severity HIGH,CRITICAL ${REGISTRY}/${svc}:${IMAGE_TAG} || true
+                           docker push ${REGISTRY}/${svc}:${IMAGE_TAG}
+                        """
+                    }
+                    // Frontend
+                    sh """
+                       docker build -f frontend/Dockerfile -t ${REGISTRY}/frontend:${IMAGE_TAG} frontend
+                       docker push ${REGISTRY}/frontend:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to dev') {
+            steps {
+                dir('helm/umbrella') {
+                    sh 'helm dependency update'
+                    sh """
+                       helm upgrade --install shop . \
+                         -f values.yaml -f values-dev.yaml \
+                         --set-string global.imageTag=${IMAGE_TAG} \
+                         -n dev --create-namespace --wait
+                    """
+                }
+            }
+        }
+
+        stage('Smoke test') {
+            steps {
+                sh 'curl -fsS http://api-gateway.dev.svc.cluster.local/actuator/health || exit 1'
+            }
+        }
+
+        stage('Promote to prod') {
+            steps {
+                input message: 'Promote this build to production?'
+                dir('helm/umbrella') {
+                    sh """
+                       helm upgrade --install shop . \
+                         -f values.yaml -f values-prod.yaml \
+                         --set-string global.imageTag=${IMAGE_TAG} \
+                         -n prod --wait
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        failure { echo 'Pipeline failed — see stage logs.' }
+        success { echo "Shipped ${IMAGE_TAG}." }
+    }
+}

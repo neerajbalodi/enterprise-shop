@@ -1,0 +1,46 @@
+# Shared defaults; override endpoints and sizing per environment in values-<env>.yaml.
+# Each key matches a dependency alias in Chart.yaml and feeds the generic `service` chart.
+
+apiGateway:
+  nameOverride: api-gateway
+  image: { repository: REPLACE_ME/api-gateway }
+  containerPort: 8080
+  service: { port: 80 }
+  ingress: { enabled: true, host: shop.example.com, path: / }
+  env:
+    USER_SERVICE_URI: http://user-service:80
+    PRODUCT_SERVICE_URI: http://product-service:80
+    ORDER_SERVICE_URI: http://order-service:80
+    PAYMENT_SERVICE_URI: http://payment-service:80
+    NOTIFICATION_SERVICE_URI: http://notification-service:80
+
+userService:
+  nameOverride: user-service
+  image: { repository: REPLACE_ME/user-service }
+  containerPort: 8081
+  envFromSecrets: [user-service-secrets]
+  serviceAccount: { create: true, annotations: {} }
+
+productService:
+  nameOverride: product-service
+  image: { repository: REPLACE_ME/product-service }
+  containerPort: 8082
+  envFromSecrets: [product-service-secrets]
+
+orderService:
+  nameOverride: order-service
+  image: { repository: REPLACE_ME/order-service }
+  containerPort: 8083
+  envFromSecrets: [order-service-secrets]
+
+paymentService:
+  nameOverride: payment-service
+  image: { repository: REPLACE_ME/payment-service }
+  containerPort: 8084
+  envFromSecrets: [payment-service-secrets]
+
+notificationService:
+  nameOverride: notification-service
+  image: { repository: REPLACE_ME/notification-service }
+  containerPort: 8085
+  envFromSecrets: [notification-service-secrets]
