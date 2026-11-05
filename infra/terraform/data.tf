@@ -9,19 +9,19 @@ resource "aws_db_subnet_group" "this" {
 }
 
 resource "aws_db_instance" "postgres" {
-  count                  = var.manage_data ? 1 : 0
-  identifier             = "${local.name}-pg"
-  engine                 = "postgres"
-  engine_version         = "16"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 20
-  db_subnet_group_name   = aws_db_subnet_group.this[0].name
-  username               = "shop"
-  password               = var.db_password
-  multi_az               = var.environment == "prod"
-  skip_final_snapshot    = true
-  publicly_accessible    = false
-  tags                   = local.tags
+  count                = var.manage_data ? 1 : 0
+  identifier           = "${local.name}-pg"
+  engine               = "postgres"
+  engine_version       = "16"
+  instance_class       = "db.t3.micro"
+  allocated_storage    = 20
+  db_subnet_group_name = aws_db_subnet_group.this[0].name
+  username             = "shop"
+  password             = var.db_password
+  multi_az             = var.environment == "prod"
+  skip_final_snapshot  = true
+  publicly_accessible  = false
+  tags                 = local.tags
 }
 
 resource "aws_elasticache_subnet_group" "this" {
@@ -43,10 +43,19 @@ resource "aws_elasticache_cluster" "redis" {
 resource "aws_msk_serverless_cluster" "kafka" {
   count        = var.manage_data ? 1 : 0
   cluster_name = "${local.name}-kafka"
+
   vpc_config {
     subnet_ids         = module.vpc.private_subnets
     security_group_ids = [module.eks.cluster_primary_security_group_id]
   }
-  client_authentication { sasl { iam { enabled = true } } }
+
+  client_authentication {
+    sasl {
+      iam {
+        enabled = true
+      }
+    }
+  }
+
   tags = local.tags
 }
