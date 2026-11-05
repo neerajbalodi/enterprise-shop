@@ -1,9 +1,7 @@
 # ---- build stage ----
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
-COPY pom.xml .
-COPY libs ./libs
-COPY services/api-gateway ./services/api-gateway
+COPY . .
 RUN mvn -q -pl services/api-gateway -am clean package -DskipTests
 
 # ---- run stage ----

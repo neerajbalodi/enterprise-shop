@@ -1,9 +1,7 @@
 # ---- build stage ----
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
-COPY pom.xml .
-COPY libs ./libs
-COPY services/user-service ./services/user-service
+COPY . .
 RUN mvn -q -pl services/user-service -am clean package -DskipTests
 
 # ---- run stage ----
