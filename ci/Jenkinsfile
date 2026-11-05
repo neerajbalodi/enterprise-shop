@@ -104,7 +104,7 @@ EOT
                     set -e
                     aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
                     for svc in api-gateway user-service product-service order-service payment-service notification-service; do
-                        docker build -f services/$svc/Dockerfile -t "$ECR_REGISTRY/enterprise-shop/$svc:$TAG" .
+                        docker build -f services/$svc/Dockerfile -t "$ECR_REGISTRY/enterprise-shop/$svc:$TAG" services/$svc/target
                         docker push "$ECR_REGISTRY/enterprise-shop/$svc:$TAG"
                     done
                     docker build -f frontend/Dockerfile -t "$ECR_REGISTRY/enterprise-shop/frontend:$TAG" frontend

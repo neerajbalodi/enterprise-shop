@@ -1,14 +1,9 @@
-# ---- build stage ----
-FROM maven:3.9-eclipse-temurin-21 AS build
-WORKDIR /workspace
-COPY . .
-RUN mvn -q -pl services/product-service -am clean package -DskipTests
-
-# ---- run stage ----
+# Runs the jar built once by the pipeline's Build & Test stage.
+# Build context is services/product-service/target (just the jar) — tiny and fast.
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 RUN useradd -r -u 1001 appuser
-COPY --from=build /workspace/services/product-service/target/*.jar app.jar
+COPY *.jar app.jar
 USER appuser
 EXPOSE 8082
 ENTRYPOINT ["java","-jar","app.jar"]
