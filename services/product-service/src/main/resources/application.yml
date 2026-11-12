@@ -8,14 +8,19 @@ spring:
     username: ${POSTGRES_USER:shop}
     password: ${POSTGRES_PASSWORD:shop}
   jpa:
-    hibernate: { ddl-auto: validate }
+    hibernate:
+      ddl-auto: validate
     open-in-view: false
-  flyway: { enabled: true }
+  flyway:
+    enabled: true
   data:
-    redis: { host: ${REDIS_HOST:localhost}, port: ${REDIS_PORT:6379} }
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   cache:
     type: redis
-    redis: { time-to-live: 300000 }
+    redis:
+      time-to-live: 300000
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     producer:
@@ -30,5 +35,11 @@ spring:
         spring.json.trusted.packages: "com.enterpriseshop.events"
         spring.json.value.default.type: "com.enterpriseshop.events.OrderPlacedEvent"
 management:
-  endpoints: { web: { exposure: { include: health,info,prometheus } } }
-  endpoint: { health: { probes: { enabled: true } } }
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true

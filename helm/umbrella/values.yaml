@@ -86,6 +86,7 @@ notificationService:
 
 frontend:
   nameOverride: frontend
+  runAsRoot: true          # stock nginx needs root to write its cache/config
   image: { repository: REPLACE_ME/frontend, tag: latest }
   containerPort: 80
   service: { port: 80 }

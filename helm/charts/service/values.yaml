@@ -45,3 +45,6 @@ ingress:
   className: alb
   host: ""
   path: /
+
+# Set true for images that must run as root (e.g. stock nginx).
+runAsRoot: false
