@@ -89,7 +89,7 @@ frontend:
   runAsRoot: true          # stock nginx needs root to write its cache/config
   image: { repository: REPLACE_ME/frontend, tag: latest }
   containerPort: 80
-  service: { port: 80 }
+  service: { type: LoadBalancer, port: 80 }
   probes: { livenessPath: /, readinessPath: / }
   ingress: { enabled: true, className: alb, host: shop.example.com, path: / }
   env:
