@@ -3,5 +3,5 @@ userService:        { replicaCount: 1, autoscaling: { enabled: false } }
 productService:     { replicaCount: 1, autoscaling: { enabled: false } }
 orderService:       { replicaCount: 1, autoscaling: { enabled: false } }
 paymentService:     { replicaCount: 1, autoscaling: { enabled: false } }
-notificationService:{ replicaCount: 1, autoscaling: { enabled: false } }
+notificationService: { replicaCount: 1, autoscaling: { enabled: false } }
 apiGateway:         { replicaCount: 1, ingress: { host: dev.shop.example.com } }
