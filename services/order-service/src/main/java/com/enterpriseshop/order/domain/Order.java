@@ -26,8 +26,9 @@ public class Order {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JoinColumn(name = "order_id")
+    // Inverse side: OrderItem owns the FK (mappedBy = "order"), so each item's
+    // order_id is set on its INSERT instead of a null-then-update.
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<OrderItem> items = new ArrayList<>();
 
     protected Order() {}
@@ -41,6 +42,7 @@ public class Order {
     }
 
     public void addItem(OrderItem item) {
+        item.assignOrder(this);
         items.add(item);
         total = total.add(item.lineTotal());
     }
