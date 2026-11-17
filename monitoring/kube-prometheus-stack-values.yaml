@@ -1,0 +1,53 @@
+# Slim values for a teaching cluster. Deploys Prometheus + Grafana (Alertmanager off for now).
+# Prometheus discovers our Spring Boot pods via the prometheus.io/* annotations the Helm chart
+# stamps on every service pod, so no ServiceMonitor wiring is needed.
+
+alertmanager:
+  enabled: false        # add back in Phase 4 (alerting)
+
+grafana:
+  adminPassword: "admin123"      # demo only — change for anything real
+  service:
+    type: LoadBalancer           # gives Grafana a public URL, like the app
+  resources:
+    requests: { memory: 128Mi, cpu: 50m }
+
+# Trim the built-in cluster scrapers a bit for a small lab
+kubeStateMetrics:
+  enabled: true
+nodeExporter:
+  enabled: true
+
+prometheus:
+  prometheusSpec:
+    retention: 2d                # short history for a lab
+    resources:
+      requests: { memory: 512Mi, cpu: 200m }
+      limits:   { memory: 1Gi,   cpu: 500m }
+    # Scrape every pod that carries prometheus.io/scrape=true (our services do)
+    additionalScrapeConfigs:
+      - job_name: "spring-boot-pods"
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            action: replace
+            target_label: app

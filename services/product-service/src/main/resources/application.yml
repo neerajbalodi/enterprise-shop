@@ -35,6 +35,9 @@ spring:
         spring.json.trusted.packages: "com.enterpriseshop.events"
         spring.json.value.default.type: "com.enterpriseshop.events.OrderPlacedEvent"
 management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoints:
     web:
       exposure:

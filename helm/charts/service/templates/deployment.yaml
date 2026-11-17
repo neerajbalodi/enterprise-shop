@@ -13,6 +13,10 @@ spec:
       app.kubernetes.io/instance: {{ .Release.Name }}
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/actuator/prometheus"
+        prometheus.io/port: "{{ .Values.containerPort }}"
       labels: {{- include "service.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "service.serviceAccountName" . }}
