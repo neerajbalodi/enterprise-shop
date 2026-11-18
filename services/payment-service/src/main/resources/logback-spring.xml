@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- JSON structured logging for Loki. When the OpenTelemetry agent is active it
+     injects trace_id/span_id into the MDC, which LogstashEncoder includes automatically,
+     giving us logs correlated to traces. -->
+<configuration>
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="app"/>
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"${appName}"}</customFields>
+        </encoder>
+    </appender>
+    <root level="INFO">
+        <appender-ref ref="JSON"/>
+    </root>
+</configuration>

@@ -11,6 +11,24 @@ grafana:
     type: LoadBalancer           # gives Grafana a public URL, like the app
   resources:
     requests: { memory: 128Mi, cpu: 50m }
+  # Wire Loki (logs) and Tempo (traces) so all three pillars live in one Grafana.
+  # The derived field turns a trace_id in a log line into a click-through to the trace.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: http://loki.monitoring.svc.cluster.local:3100
+      jsonData:
+        derivedFields:
+          - name: TraceID
+            matcherRegex: '"trace_id":"(\w+)"'
+            datasourceUid: tempo
+            url: '$${__value.raw}'
+    - name: Tempo
+      type: tempo
+      uid: tempo
+      access: proxy
+      url: http://tempo.monitoring.svc.cluster.local:3100
 
 # Trim the built-in cluster scrapers a bit for a small lab
 kubeStateMetrics:

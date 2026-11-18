@@ -40,7 +40,7 @@ module "eks" {
       instance_types = ["t3.large"]
       min_size       = 2
       max_size       = 4
-      desired_size   = 2
+      desired_size   = 3
       capacity_type  = "SPOT"   # cheaper for a lab
     }
   }

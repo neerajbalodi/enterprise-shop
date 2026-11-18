@@ -166,14 +166,61 @@ EOT
             }
         }
 
+        stage('Observability Stack') {
+            when { expression { params.ACTION == 'deploy' } }
+            steps {
+                sh '''
+                    set -e
+                    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts >/dev/null 2>&1 || true
+                    helm repo add grafana https://grafana.github.io/helm-charts >/dev/null 2>&1 || true
+                    helm repo update >/dev/null
+
+                    # Metrics + Grafana (Grafana exposed via LoadBalancer; Loki+Tempo datasources baked in)
+                    helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+                      -n monitoring --create-namespace \
+                      -f monitoring/kube-prometheus-stack-values.yaml
+
+                    # Logs: Loki + Promtail (chart defaults)
+                    helm upgrade --install loki grafana/loki-stack -n monitoring
+
+                    # Traces: Tempo single-binary (chart defaults enable OTLP gRPC on 4317)
+                    helm upgrade --install tempo grafana/tempo -n monitoring
+
+                    echo "Waiting for Grafana LoadBalancer address..."
+                    GRAFANA=""
+                    for i in $(seq 1 30); do
+                      GRAFANA=$(kubectl -n monitoring get svc monitoring-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+                      [ -n "$GRAFANA" ] && break
+                      sleep 10
+                    done
+                    echo "=================================================================="
+                    echo "  Grafana:  http://$GRAFANA    (login: admin / admin123)"
+                    echo "  In Grafana: Prometheus = metrics, Loki = logs, Tempo = traces"
+                    echo "=================================================================="
+                '''
+            }
+        }
+
         stage('Destroy') {
             when { expression { params.ACTION == 'destroy' } }
             steps {
                 sh '''
                     set +e
                     aws eks update-kubeconfig --name "${PROJECT}-${ENVIRONMENT}" --region "$AWS_REGION"
+
+                    # Delete every LoadBalancer Service first so AWS removes their ELBs (and ENIs),
+                    # otherwise the VPC cannot be deleted (DependencyViolation).
+                    kubectl get svc -A -o jsonpath='{range .items[?(@.spec.type=="LoadBalancer")]}{.metadata.namespace} {.metadata.name}{"\n"}{end}' \
+                      | while read ns name; do [ -n "$name" ] && kubectl -n "$ns" delete svc "$name" --wait=false; done
+
+                    # Uninstall app + observability releases
                     helm uninstall shop -n "$NS"
-                    kubectl delete namespace "$NS"
+                    helm uninstall monitoring loki tempo -n monitoring
+                    kubectl delete namespace "$NS" --wait=false
+                    kubectl delete namespace monitoring --wait=false
+
+                    echo "Waiting 90s for AWS to remove the load balancers and their network interfaces..."
+                    sleep 90
                     set -e
                     cd infra/terraform
                     ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)

@@ -1,45 +1,45 @@
-# Observability — Phase 1: Metrics (Prometheus + Grafana)
+# Observability — Metrics, Logs, Traces
 
-The app side is already wired:
-- each service has `micrometer-registry-prometheus`, so `/actuator/prometheus` is live;
-- the Helm chart stamps `prometheus.io/scrape/path/port` annotations on every service pod.
+The Jenkins pipeline's **Observability Stack** stage installs and exposes everything
+automatically on every `deploy`. No manual helm/kubectl commands are needed.
 
-## 1. Install the stack (one Helm chart)
+## What the pipeline installs (namespace: monitoring)
+- **kube-prometheus-stack** — Prometheus (metrics) + Grafana (exposed via LoadBalancer).
+- **loki-stack** — Loki (log store) + Promtail (ships every pod's logs).
+- **tempo** — Tempo (trace store), receives OTLP traces on gRPC 4317.
+Grafana is pre-wired with all three datasources (Prometheus, Loki, Tempo).
+
+## How each pillar is produced
+- **Metrics:** each service exposes `/actuator/prometheus` (micrometer-registry-prometheus);
+  Prometheus scrapes pods via the `prometheus.io/*` annotations on them.
+- **Logs:** each service logs JSON (logback-spring.xml + logstash-logback-encoder);
+  Promtail collects them into Loki.
+- **Traces:** each service runs the OpenTelemetry Java agent (baked into the image via a
+  `-javaagent` flag) and exports OTLP traces to Tempo. No app code change.
+
+## After a deploy — get the Grafana URL
+The pipeline prints it at the end of the Observability stage. Or:
 ```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-
-helm install monitoring prometheus-community/kube-prometheus-stack \
-  -n monitoring --create-namespace \
-  -f monitoring/kube-prometheus-stack-values.yaml
+echo "http://$(kubectl -n monitoring get svc monitoring-grafana -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
 ```
+Login: **admin / admin123**
 
-## 2. Get the Grafana URL (LoadBalancer)
-```bash
-kubectl -n monitoring get svc monitoring-grafana -w   # wait for EXTERNAL-IP
-```
-Open http://<that-hostname>  ·  login: **admin / admin123**
+## See the three pillars in Grafana
+- **Metrics:** Dashboards → Import → ID 11378 (Spring Boot) / 4701 (JVM).
+- **Logs:** Explore → pick **Loki** → query `{service="order-service"}`.
+- **Traces:** Explore → pick **Tempo** → search recent traces, open one to see the
+  gateway → order → payment → notification waterfall.
+- **Correlation:** a Loki log line's `trace_id` is a clickable link into the Tempo trace.
 
-## 3. Confirm Prometheus is scraping the services
-```bash
-kubectl -n monitoring port-forward svc/monitoring-kube-prometheus-prometheus 9090:9090
-# open http://localhost:9090/targets  → the "spring-boot-pods" job should list every service UP
-```
-
-## 4. See the metrics in Grafana
-- In Grafana → Dashboards → Import, add dashboard ID **4701** (JVM Micrometer) and **11378** (Spring Boot).
-- Or Explore → pick the Prometheus datasource → query:
-  `rate(http_server_requests_seconds_count[1m])`
-
-## 5. The live demo — generate load and watch it move
+## Make it move (load test)
 ```bash
 APP=$(kubectl -n shop-dev get svc frontend -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-# hammer the catalog so the graphs react in real time
 for i in $(seq 1 500); do curl -s http://$APP/api/products > /dev/null; done
+# place an order to generate a full cross-service trace:
+curl -s -X POST http://$APP/api/orders -H 'Content-Type: application/json' -H 'Idempotency-Key: t1' \
+  -d '{"userId":"<id>","lines":[{"productId":"p-1001","quantity":1,"unitPrice":89.99}]}'
 ```
-Watch request-rate and latency climb in Grafana, then settle. Place an order to see
-order-service and Kafka metrics move too.
 
-## What students see
-Request rate, error rate, p95 latency, JVM memory/GC, and Kafka consumer lag — per service,
-live — all on one Grafana screen that visibly reacts to traffic.
+## Teardown
+The pipeline's `ACTION=destroy` now deletes all LoadBalancer services and the observability
+stack before `terraform destroy`, so the VPC deletes cleanly (no manual LB cleanup needed).

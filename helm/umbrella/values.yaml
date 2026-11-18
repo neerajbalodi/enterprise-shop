@@ -3,6 +3,11 @@
 # Data layer runs in-cluster (services: postgres, redis, kafka) created from k8s/infra.
 # Credentials come from the Secret `shop-secrets` the pipeline creates in the namespace.
 
+global:
+  tracing:
+    enabled: true
+    endpoint: "http://tempo.monitoring.svc.cluster.local:4317"
+
 apiGateway:
   nameOverride: api-gateway
   image: { repository: REPLACE_ME/api-gateway, tag: latest }

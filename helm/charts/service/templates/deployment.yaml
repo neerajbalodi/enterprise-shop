@@ -40,6 +40,30 @@ spec:
             - secretRef:
                 name: {{ . }}
           {{- end }}
+          {{- if .Values.global }}
+          {{- if .Values.global.tracing }}
+          {{- if .Values.global.tracing.enabled }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ include "service.name" . }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.global.tracing.endpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: "grpc"
+            - name: OTEL_METRICS_EXPORTER
+              value: "none"
+            - name: OTEL_LOGS_EXPORTER
+              value: "none"
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          # Gives slow JVM starts (OTel agent, Flyway) up to ~5 min before liveness runs
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.livenessPath }}
+              port: {{ .Values.containerPort }}
+            failureThreshold: 30
+            periodSeconds: 10
           livenessProbe:
             httpGet:
               path: {{ .Values.probes.livenessPath }}
